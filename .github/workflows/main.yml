@@ -1,0 +1,40 @@
+name: Ubuntu RDP Setup
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Install xrdp
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y xrdp
+        sudo systemctl enable xrdp
+        sudo systemctl start xrdp
+
+    - name: Open firewall port for RDP
+      run: |
+        sudo ufw allow 3389
+
+    - name: Display IP address
+      run: |
+        ip addr show
+
+    - name: Set up Xfce desktop environment
+      run: |
+        sudo apt-get install -y xfce4
+
+    - name: Configure xrdp to use Xfce
+      run: |
+        echo xfce4-session > ~/.xsession
+        sudo cp /etc/xrdp/xrdp.ini /etc/xrdp/xrdp.ini.backup
+        sudo sed -i 's/autorun=.*$/autorun=Xorg/g' /etc/xrdp/xrdp.ini
+
+    - name: Restart xrdp service
+      run: |
+        sudo systemctl restart xrdp
