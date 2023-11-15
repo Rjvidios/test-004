@@ -1,4 +1,4 @@
-name: Ubuntu RDP Setup
+name: Ubuntu RDP with Ngrok
 
 on: [push]
 
@@ -7,34 +7,35 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
+    - name: Checkout code
       uses: actions/checkout@v2
 
-    - name: Install xrdp
+    - name: Install XRDP
       run: |
         sudo apt-get update
         sudo apt-get install -y xrdp
         sudo systemctl enable xrdp
         sudo systemctl start xrdp
 
-    - name: Open firewall port for RDP
+    - name: Install Ngrok
       run: |
-        sudo ufw allow 3389
+        mkdir -p $HOME/ngrok
+        cd $HOME/ngrok
+        wget https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-linux-amd64.zip
+        unzip ngrok-stable-linux-amd64.zip
+        ./ngrok authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
 
-    - name: Display IP address
+    - name: Start Ngrok Tunnel
       run: |
-        ip addr show
+        cd $HOME/ngrok
+        ./ngrok tcp 3389 &
 
-    - name: Set up Xfce desktop environment
+    - name: Set up XRDP session
       run: |
-        sudo apt-get install -y xfce4
+        sleep 10 # Wait for Ngrok to start
+        DISPLAY=:0 sudo xrdp
 
-    - name: Configure xrdp to use Xfce
+    - name: Display Ngrok Tunnel URL
       run: |
-        echo xfce4-session > ~/.xsession
-        sudo cp /etc/xrdp/xrdp.ini /etc/xrdp/xrdp.ini.backup
-        sudo sed -i 's/autorun=.*$/autorun=Xorg/g' /etc/xrdp/xrdp.ini
-
-    - name: Restart xrdp service
-      run: |
-        sudo systemctl restart xrdp
+        sleep 20 # Wait for XRDP to start
+        curl http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url'
